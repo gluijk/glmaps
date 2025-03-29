@@ -1,8 +1,8 @@
-# Composite colour hillshade
+# Hillshade map
 # www.overfitting.net
 # https://www.overfitting.net/
 
-library(terra)  # build blur and resample functions
+library(terra)  # resample function
 library(tiff)  # save 16-bit TIFF's
 
 
@@ -27,15 +27,15 @@ hillshademap=function(DEM, dx=25, dlight=c(0, 2, 3), gamma=1) {
     # DEM: digital elevation map matrix
     # dx: DEM resolution/cell size (same units as elevation values)
     # dlight: lighting direction. It can be defined in three ways:
-    # a) 1D value indicating light source Azimuth in degrees (0-360)
-    #    (0=North, 90=East, 180=South, 270=West)
-    # b) 2D vector indicating light source (X,Y) coordinates
-    # c) 3D vector indicating light source (X,Y,Z) coordinates:
-    #    (X=South, Y=East, Z=Up)
-    #    dlight=c(0, 2, 3)  # sunrise
-    #    dlight=c(0, 0, 1)  # midday
-    #    dlight=c(0,-2, 3)  # sunset
-    # NOTE: both in a) and b) a 45º Elevation angle is applied
+    #   a) 1D value indicating light source Azimuth in degrees (0-360)
+    #      (0=North, 90=East, 180=South, 270=West)
+    #   b) 2D vector indicating light source (X,Y) coordinates
+    #   c) 3D vector indicating light source (X,Y,Z) coordinates:
+    #      (X=South, Y=East, Z=Up)
+    #      dlight=c(0, 2, 3)  # sunrise
+    #      dlight=c(0, 0, 1)  # midday
+    #      dlight=c(0,-2, 3)  # sunset
+    #   NOTE: both in a) and b) a 45º Elevation angle is applied
     # gamma: optional output gamma lift
     
     DIMY=nrow(DEM)
@@ -46,7 +46,7 @@ hillshademap=function(DEM, dx=25, dlight=c(0, 2, 3), gamma=1) {
         DEM=matrix(DEM[,,1], nrow=DIMY, ncol=DIMX)
     }
     
-    # If only light azimuth is provided generate a 45º 3D light angle
+    # Deal with lighting direction
     if (length(dlight)==1) dlight=c(-cos(dlight*pi/180), sin(dlight*pi/180))
     if (length(dlight)==2) dlight=c(dlight, (dlight[1]^2+dlight[2]^2)^0.5)
     dlightM=sum(dlight^2)^0.5
@@ -110,7 +110,7 @@ writeTIFF(DEM/max(DEM), "tenerifecomposite_fullHD.tif",
 
 #################################################
 
-# 3. GENERATE HILLSHADE
+# 3. GENERATE BASIC HILLSHADE
 
 # 3 ways to define the same light source
 hillshade=hillshademap(DEM, dx=RESOLUTION, dlight=270)  # Azimuth
@@ -122,4 +122,18 @@ writeTIFF(hillshade, "hillshade.tif", bits.per.sample=16, compression="LZW")
 image(t(hillshade[nrow(hillshade):1,]), useRaster=TRUE,
       col=c(gray.colors(256, start=0, end=1, gamma=1)),
       asp=nrow(hillshade)/ncol(hillshade), axes=FALSE)
+
+
+#################################################
+
+# 4. GENERATE FALSE COLOUR HILLSHADE (IDEA FROM JOHN NELSON)
+
+hillshadeW =hillshademap(DEM, dx=RESOLUTION, dlight=270)
+hillshadeNW=hillshademap(DEM, dx=RESOLUTION, dlight=-45)
+hillshadeN =hillshademap(DEM, dx=RESOLUTION, dlight=0)
+img=replicate(3, hillshadeW)
+img[,,2]=hillshadeNW
+img[,,3]=hillshadeN
+writeTIFF(img, "hillshadecolour.tif", bits.per.sample=16, compression="LZW")
+
 

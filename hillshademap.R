@@ -6,20 +6,6 @@ library(terra)  # resample function
 library(tiff)  # save 16-bit TIFF's
 
 
-# Generic array resample function
-# works both for matrix (grayscale images) or 3-channel arrays (colour images)
-arrayresample=function(img, DIMX, DIMY, method='bilinear') {
-    require(terra)
-    
-    raster=rast(img)
-    rasterrs=rast(nrows=DIMY, ncols=DIMX, extent=ext(raster))
-    rasterrs=resample(raster, rasterrs, method=method)
-    
-    if (is.matrix(img)) return (matrix(as.array(rasterrs), nrow=nrow(rasterrs)))
-    else return (as.array(rasterrs))  # convert back to matrix/array
-}
-
-
 # Hillshade calculation
 hillshademap=function(DEM, dx=25, dlight=c(0, 2, 3), gamma=1) {
     # hillshademap() inputs DEM data and outputs a hillshade matrix
@@ -72,6 +58,19 @@ hillshademap=function(DEM, dx=25, dlight=c(0, 2, 3), gamma=1) {
     hillshademap[,c(1,DIMX)]=hillshademap[,c(2,DIMX-1)]
     
     return(hillshademap^(1/gamma))
+}
+
+# Generic array resample function
+# works both for matrix (grayscale images) or 3-channel arrays (colour images)
+arrayresample=function(img, DIMX, DIMY, method='bilinear') {
+    require(terra)
+    
+    raster=rast(img)
+    rasterrs=rast(nrows=DIMY, ncols=DIMX, extent=ext(raster))
+    rasterrs=resample(raster, rasterrs, method=method)
+    
+    if (is.matrix(img)) return (matrix(as.array(rasterrs), nrow=nrow(rasterrs)))
+    else return (as.array(rasterrs))  # convert back to matrix/array
 }
 
 

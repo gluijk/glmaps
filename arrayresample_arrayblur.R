@@ -28,19 +28,27 @@ arrayresample=function(img, DIMX, DIMY, method='bilinear') {
 
 # Blur
 # https://stackoverflow.com/questions/70429190/how-can-i-perform-neighborhood-analysis-in-terra-or-raster-and-keep-the-same-na
-arrayblur=function(img, radius=10) {
-    # radius: radius of the circular averaging window
+arrayblur=function(img, radius=10, kernel='gaussian', fun='mean') {
+    # radius: radius of the averaging window
+    # kernel: 'gaussian', 'spherical'. Otherwise all 1's
     
     require(terra)
     
     # Build circular kernel
     D=2*radius+1  # D will always be an odd number as required by focal()
+    sigma=radius/3  # keep gaussian shape for every radius
     w=matrix(1, nrow=D, ncol=D)
-    w[(row(w)-(radius+1))^2 + (col(w)-(radius+1))^2 >= (radius+1)^2]=NA
-    # writePNG(w, "blurkernel.png")
+    if (kernel=='gaussian') {  # gaussian filter
+        w=exp(-((row(w)-(radius+1))^2 + (col(w)-(radius+1))^2) / (2 * sigma^2))
+    } else if (kernel=='spherical') {  # spherical filter
+        w=1 - ((row(w)-(radius+1))^2 + (col(w)-(radius+1))^2) / (radius+1)^2        
+    }
+    # Ignore values out of the radius
+    w[(row(w)-(radius+1))^2 + (col(w)-(radius+1))^2 > (radius+1)^2]=NA
+    writePNG(w, "blurkernel.png")
     
     raster=rast(img)  # process as raster
-    rasterblur=focal(raster, w=w, fun='mean', na.rm=TRUE, na.policy='omit')
+    rasterblur=focal(raster, w=w, fun=fun, na.rm=TRUE, na.policy='omit')
     
     if (is.matrix(img)) return (matrix(as.array(rasterblur), nrow=nrow(rasterblur)))
     else return (as.array(rasterblur))  # convert back to matrix/array
